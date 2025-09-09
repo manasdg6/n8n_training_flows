@@ -1,0 +1,547 @@
+{
+  "name": "Lead Generation Test Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Enter Name of Business",
+        "formDescription": "Submit the name of the Business to extract leads from.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Name of Business",
+              "placeholder": "setuschool.com",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -1040,
+        -96
+      ],
+      "id": "f7a77a20-b380-4fa5-b48c-ea7f975c7bd6",
+      "name": "On form submission",
+      "webhookId": "d12afb50-b9ac-4d38-acf7-035e3ce6842c"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json['Name of Business'] }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "Company_URL",
+              "description": "Extract the company URL of the given business. Return the entire URL starting from https...",
+              "required": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        -672,
+        -96
+      ],
+      "id": "780e528d-e11f-4771-a973-603f03819e35",
+      "name": "Information Extractor"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -736,
+        128
+      ],
+      "id": "73393460-69dd-42df-a010-5958d5722494",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "Hogg9YMTGgAPQsh7",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/dainty_screw~contact-info-scraper--extract-business-contact-information/run-sync-get-dataset-items",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"considerChildFrames\": true,\n    \"maxDepth\": 2,\n    \"maxRequests\": 5,\n    \"sameDomain\": true,\n    \"startUrls\": [\n        {\n            \"url\": \"{{ $json.output.Company_URL }}\",\n            \"method\": \"GET\"\n        }\n    ]\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -400,
+        224
+      ],
+      "id": "960082c6-3ca0-4c22-9e18-a7c21d4009cc",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "HcEnCRIV5UNX7qBg",
+          "name": "Apify Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2f74edce-5e46-4fb5-803c-87bb6a053f10",
+              "leftValue": "={{ $json.output.Company_URL }}",
+              "rightValue": "//",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -256,
+        -96
+      ],
+      "id": "dd6834a5-c6ff-4377-8238-799361f8a6c2",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Workflow completed",
+        "completionMessage": "No website URLs found for this business!",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 1,
+      "position": [
+        48,
+        160
+      ],
+      "id": "ce2de77e-3c11-4992-b21a-f93991509540",
+      "name": "Form",
+      "webhookId": "60942154-8f9d-4cdf-8780-3a334ebf20fd"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        336,
+        144
+      ],
+      "id": "1a96791a-6444-415d-bee4-d80d99385779",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "Hogg9YMTGgAPQsh7",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You have received the prospect company information: {{ $json.output['Company Details'] }}\nYou have a Vector Store that contains information about our company. \nPlease create a suitable cold email content to be sent to this prospect company, it should be customized with information (retrieved from vector store) on how we can support or serve the company whose email id it is. ",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        752,
+        -160
+      ],
+      "id": "688e2d8d-a915-49e9-ba91-a4b5173f0d2c",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        640,
+        128
+      ],
+      "id": "b6cf9a63-ca3d-4858-9844-867e310cdd5b",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "Hogg9YMTGgAPQsh7",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Use this knowledge base to answer questions from the user",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "businessdetails",
+          "mode": "list",
+          "cachedResultName": "businessdetails"
+        },
+        "useReranker": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        816,
+        272
+      ],
+      "id": "715bf2f9-2623-43f4-8886-46f46c70d06d",
+      "name": "Pinecone Vector Store",
+      "credentials": {
+        "pineconeApi": {
+          "id": "xM7KSKDvgJhijkaz",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "topN": 4
+      },
+      "type": "@n8n/n8n-nodes-langchain.rerankerCohere",
+      "typeVersion": 1,
+      "position": [
+        944,
+        480
+      ],
+      "id": "a5e0a152-cf98-43c5-8edb-343e0cb4ddd3",
+      "name": "Reranker Cohere",
+      "credentials": {
+        "cohereApi": {
+          "id": "vdcijKBMdT689euK",
+          "name": "CohereApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "text-embedding-3-large",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        736,
+        480
+      ],
+      "id": "3a4c5fc1-88b6-4d77-813d-0dbcb4c2c77d",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "FqlNyKUcgqfIlqXY",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1HOAGYmPgxZM9KC4GzYibiJLKuaxdVdEJJa8CtVRTe7U",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Content": "={{ $json.output }}",
+            "Email": "={{ $item(0).$node[\"Email Extractor\"].json.output.Email }}",
+            "Company": "={{ $('Information Extractor').item.json.output.Company_URL }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Content",
+              "displayName": "Content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1104,
+        128
+      ],
+      "id": "1a6520ce-71f5-44fd-951e-304196dcabc8",
+      "name": "Append row in sheet",
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "d2FFfVoKgc5DjZr5",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "scrape",
+        "url": "={{ $('Information Extractor').item.json.output.Company_URL }}",
+        "requestOptions": {}
+      },
+      "type": "@mendable/n8n-nodes-firecrawl.firecrawl",
+      "typeVersion": 1,
+      "position": [
+        80,
+        -112
+      ],
+      "id": "52f50cba-5d6a-44eb-9423-b6bac2a8e4ff",
+      "name": "Scrape a url and get its content",
+      "credentials": {
+        "firecrawlApi": {
+          "id": "AY3ERXD5vAjCRmxV",
+          "name": "Firecrawl account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.data.markdown }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "Email",
+              "description": "=Find out the best and only one email address from the input content from a webpage. \nThe mail address have to be in ideal format.\nOutput only a single email id withut duplication. ",
+              "required": true
+            },
+            {
+              "name": "Company Details",
+              "description": "Summarise the nature of the the business from the input information."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        336,
+        -128
+      ],
+      "id": "a53bc8df-e9f3-49a5-b01d-4bf50bae7fbd",
+      "name": "Email Extractor",
+      "executeOnce": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Information Extractor": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        []
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Scrape a url and get its content",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Email Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reranker Cohere": {
+      "ai_reranker": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_reranker",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape a url and get its content": {
+      "main": [
+        [
+          {
+            "node": "Email Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Extractor": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e2f7a1bd-fc1b-4c5c-933c-bdd0d1fc9077",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e646eb48346a5f9fd648f225b0947f07bfa7f08f9420dbb5fb9d3085e679b792"
+  },
+  "id": "2Z9fjsXsHRsitEE7",
+  "tags": []
+}
